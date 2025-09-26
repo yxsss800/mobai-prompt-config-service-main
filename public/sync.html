@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>主程序数据同步</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        .result { margin: 20px 0; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>主程序数据同步工具</h1>
+    
+    <button onclick="checkStatus()">检查主程序状态</button>
+    <button onclick="syncLogs()">同步主程序日志</button>
+    
+    <div id="result" class="result"></div>
+    
+    <script>
+        async function checkStatus() {
+            try {
+                const response = await fetch("/api/main-program/status");
+                const data = await response.json();
+                document.getElementById("result").innerHTML = 
+                    `主程序状态: ${data.data.connected ? "已连接" : "未连接"}`;
+            } catch (error) {
+                document.getElementById("result").innerHTML = "检查状态失败: " + error.message;
+            }
+        }
+        
+        async function syncLogs() {
+            if (!confirm("确定要从主程序同步日志吗？")) return;
+            
+            try {
+                const response = await fetch("/api/main-program/sync", { method: "POST" });
+                const data = await response.json();
+                document.getElementById("result").innerHTML = 
+                    data.success ? data.data.message : "同步失败: " + data.message;
+            } catch (error) {
+                document.getElementById("result").innerHTML = "同步失败: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

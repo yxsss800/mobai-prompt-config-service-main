@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// AI模型表（添加表名映射，对应数据库中的 aimodel 表）
+model AIModel {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // 模型名称（唯一）
+  apiUrl    String   // API地址
+  apiKey    String    // API密钥
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  configs   AIConfig[]
+
+  // 关键：指定映射到数据库的表名为 aimodel（全小写）
+  @@map("aimodel")
+}
+
+// 用户表
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique // 用户名（唯一）
+  email     String   @unique // 邮箱（唯一）
+  password  String   // 密码（加密存储）
+  name      String?  // 真实姓名
+  role      String   @default("user") // 角色：admin, user
+  isActive  Boolean  @default(true) // 是否激活
+  lastLogin DateTime? // 最后登录时间
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user")
+}
+
+// AI配置表（添加表名映射，对应数据库中的 aiconfig 表）
+model AIConfig {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique // 配置名称（唯一索引）
+  modelId         Int      // 外键，关联AIModel
+  model           AIModel  @relation(fields: [modelId], references: [id])
+  systemPrompt    String    @db.Text // 系统提示词
+  userPrompt      String    @db.Text // 用户提示词模板
+  inputParams     String?   @db.Text // 输入参数定义
+  params          String?   @db.Text // 模型参数 (temperature, max_tokens等)
+  streaming       Boolean  @default(false) // 是否流式输出
+  thinking        Boolean  @default(false) // 是否显示思考过程
+  outputStructure String?   @db.Text // 输出结构定义
+  description     String?
+  category        String   @default("ai-config") // 配置分类
+  isActive        Boolean  @default(true)
+  version         Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关键：指定映射到数据库的表名为 aiconfig（全小写）
+  @@map("aiconfig")
+}
+
