@@ -43,6 +43,7 @@ export interface ConfigCardProps {
   onToggleVariables: (id: string) => void
   onToggleSystemPrompt: (id: string) => void
   onCopyToClipboard: (text: string, id: string) => void
+  onReadAloud: (config: Config) => void;        //TTS
 }
 
 export interface ConfigListProps {
@@ -56,6 +57,7 @@ export interface ConfigListProps {
   onToggleSystemPrompt: (id: string) => void
   onCopyToClipboard: (text: string, id: string) => void
   onCreateNew: () => void
+  onReadAloud: (config: Config) => void;        //TTS
 }
 
 export interface PageHeaderProps {

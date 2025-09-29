@@ -12,7 +12,8 @@ export default function ConfigList({
   onToggleVariables,
   onToggleSystemPrompt,
   onCopyToClipboard,
-  onCreateNew
+  onCreateNew,
+  onReadAloud 
 }: ConfigListProps) {
   if (!configs || configs.length === 0) {
     return <EmptyState onCreateNew={onCreateNew} />
@@ -32,6 +33,7 @@ export default function ConfigList({
           onToggleVariables={onToggleVariables}
           onToggleSystemPrompt={onToggleSystemPrompt}
           onCopyToClipboard={onCopyToClipboard}
+          onReadAloud={onReadAloud}
         />
       ))}
     </div>

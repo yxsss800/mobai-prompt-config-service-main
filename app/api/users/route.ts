@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { selectVoiceForCharacter } from '@/lib/voiceSelector'
+
 
 // 获取所有用户
 export async function GET() {
@@ -86,6 +88,23 @@ export async function POST(request: NextRequest) {
         updatedAt: true,
       }
     })
+
+    // --- 新增逻辑：在用户创建成功后，为其绑定TTS音色 ---
+    const descriptionForVoiceSelection = name || username; 
+    
+    selectVoiceForCharacter(descriptionForVoiceSelection)
+      .then((voiceId: string) => { // <--- 在这里给 voiceId 加上 : string
+        return prisma.ttsBinding.create({
+          data: {
+            characterId: user.id,
+            voiceId: voiceId,
+          },
+        });
+      })
+      .catch((error: any) => { // <--- 在这里给 error 加上 : any
+        console.error(`为用户 ${user.id} 绑定TTS音色失败:`, error);
+      });
+    // --- 新增逻辑结束 ---
 
     return NextResponse.json({ 
       success: true, 

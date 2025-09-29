@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Edit, Trash2, Eye, EyeOff, Copy, Check } from 'lucide-react'
+import { Edit, Trash2, Eye, EyeOff, Copy, Check, Volume2 } from 'lucide-react'
 import { ConfigCardProps } from './types'
 
 export default function ConfigCard({
@@ -13,7 +13,8 @@ export default function ConfigCard({
   copiedId,
   onToggleVariables,
   onToggleSystemPrompt,
-  onCopyToClipboard
+  onCopyToClipboard,
+  onReadAloud
 }: ConfigCardProps) {
   return (
     <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
@@ -33,6 +34,14 @@ export default function ConfigCard({
             >
               <Edit className="w-4 h-4 mr-1" />
               编辑
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onReadAloud(config)}
+            >
+              <Volume2 className="w-4 h-4 mr-1" />
+              朗读
             </Button>
             <Button
               variant="outline"

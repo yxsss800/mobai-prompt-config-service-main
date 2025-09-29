@@ -8,6 +8,8 @@ import ConfigList from '@/components/ConfigList'
 import EditConfigModal from '@/components/EditConfigModal'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { Config, Model, FormData } from '@/components/types'
+import VoiceInputButton from '@/components/VoiceInputButton'        // TTS
+import { useAuth } from '@/context/AuthContext';        // TTS
 
 export default function HomePage() {
   const [configs, setConfigs] = useState<Config[]>([])
@@ -26,6 +28,7 @@ export default function HomePage() {
   const [showVariables, setShowVariables] = useState<{ [key: string]: boolean }>({})
   const [showSystemPrompt, setShowSystemPrompt] = useState<{ [key: string]: boolean }>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const { user, loading: userLoading } = useAuth()
 
   useEffect(() => {
     loadData()
@@ -150,9 +153,27 @@ export default function HomePage() {
     }
   }
 
-  if (loading) {
-    return <LoadingSpinner />
-  }
+  const handleReadConfigPrompt = (config: Config) => {
+    if (!user) {
+      alert("无法获取当前用户信息，请尝试重新登录。");
+      return;
+    }
+
+    const characterId = user.id; 
+    const textToRead = config.systemPrompt;
+
+    if (!textToRead) {
+      alert("系统提示为空，无法朗读。");
+      return;
+    }
+
+    console.log("准备为角色", characterId, "朗读配置:", config.name);
+    playTextToSpeech(characterId, textToRead);
+  };
+
+  if (loading || userLoading) {
+    return <LoadingSpinner />
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-50">
@@ -182,6 +203,7 @@ export default function HomePage() {
           configs={configs}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onReadAloud={handleReadConfigPrompt}      //TTS
           showVariables={showVariables}
           showSystemPrompt={showSystemPrompt}
           copiedId={copiedId}
@@ -207,7 +229,89 @@ export default function HomePage() {
           }}
           isEditing={true}
         />
+        <div className="mt-12">       
+          <h2 className="text-2xl font-bold mb-4 text-center">ASR 语音输入测试</h2> 
+          <div className="max-w-md mx-auto">
+            <VoiceInputButton />
+          </div>
+        </div>
+
       </div>
     </div>
   )
+}
+
+function playTextToSpeech(characterId: number, textToRead: string) {
+  console.log('[TTS Frontend] 开始专业流媒体播放...');
+  const ws = new WebSocket('ws://localhost:3002/api/tts/stream');
+  
+  const audio = new Audio();
+  const mediaSource = new MediaSource();
+  audio.src = URL.createObjectURL(mediaSource);
+
+  // 尝试播放
+  audio.play().catch(e => console.error("音频播放启动失败，可能是用户未与页面交互:", e));
+
+  // 当 MediaSource 准备好时
+  mediaSource.addEventListener('sourceopen', () => {
+    console.log('[TTS Frontend] MediaSource 已打开，准备接收数据');
+    const sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+    
+    // 1. 创建一个“等待区”队列
+    const chunkQueue: ArrayBuffer[] = [];
+
+    // 2. 创建一个专门处理队列的函数
+    const processQueue = () => {
+      // 如果缓冲区正忙，或者队列是空的，就先不处理
+      if (sourceBuffer.updating || chunkQueue.length === 0) {
+        return;
+      }
+      // 从队列里取出第一个音频块并添加到缓冲区
+      const nextChunk = chunkQueue.shift();
+      if (nextChunk) {
+        sourceBuffer.appendBuffer(nextChunk);
+      }
+    };
+
+    // 3. 当缓冲区处理完一个块，变得空闲时，就主动去处理队列里的下一个
+    sourceBuffer.addEventListener('updateend', () => {
+      processQueue();
+    });
+
+    // 4. 当收到新的音频块时，不再直接处理，而是先放进队列
+    ws.onmessage = async (event) => {
+      try {
+        const arrayBuffer = await event.data.arrayBuffer();
+        chunkQueue.push(arrayBuffer);
+        // 尝试处理队列
+        processQueue();
+      } catch (error) {
+        console.error("处理音频块时出错:", error);
+      }
+    };
+
+    // 当 WebSocket 关闭时
+    ws.onclose = () => {
+      // 等待缓冲区和队列都处理完毕
+      const checkBuffer = setInterval(() => {
+        if (!sourceBuffer.updating && chunkQueue.length === 0) {
+          clearInterval(checkBuffer);
+          if (mediaSource.readyState === 'open') {
+            mediaSource.endOfStream();
+          }
+          console.log('[TTS Frontend] WebSocket 已关闭，媒体流结束。');
+        }
+      }, 100);
+    };
+  });
+
+  ws.onopen = () => {
+    console.log('[TTS Frontend] WebSocket 已连接，发送请求');
+    ws.send(JSON.stringify({
+      character_id: String(characterId),
+      text: textToRead,
+    }));
+  };
+  
+  ws.onerror = (error) => console.error('[TTS Frontend] WebSocket 错误:', error);
 }
